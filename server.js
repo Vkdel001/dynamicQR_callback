@@ -9,7 +9,7 @@ const WEBHOOK_AES_IV  = process.env.WEBHOOK_AES_IV  || '';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
-app.use(express.text({ type: '*/*', limit: '1mb' }));
+app.use(express.raw({ type: '*/*', limit: '1mb' }));
 
 // ── In-memory log of received webhooks ─────────────────────────────
 const webhookLog = [];
@@ -49,15 +49,12 @@ app.post('/webhook', (req, res) => {
   const timestamp = new Date().toISOString();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  // Always respond 200 to Blink first, then process
-  res.json({
-    Data: {},
-    Status: { i: true, m: 'OK', s: '200' }
-  });
-
-  // Parse body — could be JSON or raw text
+  // Parse body — could be JSON object, Buffer, or string
   let body = req.body;
-  if (typeof body === 'string') {
+  if (Buffer.isBuffer(body)) {
+    const str = body.toString('utf8');
+    try { body = JSON.parse(str); } catch { body = str; }
+  } else if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { /* keep as string */ }
   }
 
@@ -126,6 +123,13 @@ app.post('/webhook', (req, res) => {
   // Store in log
   webhookLog.unshift(entry);
   if (webhookLog.length > MAX_LOG) webhookLog.pop();
+
+  // Respond to Blink — exact format matching PHP stdClass output
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).send(JSON.stringify({
+    Data: {},
+    Status: { i: true, m: 'OK', s: '200' }
+  }));
 });
 
 // ═══════════════════════════════════════════════════════════════════
