@@ -49,6 +49,12 @@ app.post('/webhook', (req, res) => {
   const timestamp = new Date().toISOString();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
+  // Always respond 200 to Blink first, then process
+  res.json({
+    Data: {},
+    Status: { i: true, m: 'OK', s: '200' }
+  });
+
   // Parse body — could be JSON or raw text
   let body = req.body;
   if (typeof body === 'string') {
@@ -74,7 +80,8 @@ app.post('/webhook', (req, res) => {
   console.log(`[WEBHOOK] ${timestamp}`);
   console.log(`[WEBHOOK] IP: ${ip}`);
   console.log(`[WEBHOOK] Content-Type: ${req.headers['content-type']}`);
-  console.log(`[WEBHOOK] Raw body: ${entry.rawBody.substring(0, 200)}`);
+  console.log(`[WEBHOOK] AES Key: ${WEBHOOK_AES_KEY.length} bytes, IV: ${WEBHOOK_AES_IV.length} bytes`);
+  console.log(`[WEBHOOK] Raw body: ${entry.rawBody.substring(0, 300)}`);
 
   // Try to find encrypted data
   let encryptedData = null;
@@ -119,12 +126,6 @@ app.post('/webhook', (req, res) => {
   // Store in log
   webhookLog.unshift(entry);
   if (webhookLog.length > MAX_LOG) webhookLog.pop();
-
-  // Respond to Blink — always 200 with success format
-  res.json({
-    data: {},
-    status: { i: true, m: 'OK', s: '200' }
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════
