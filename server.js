@@ -11,6 +11,14 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(express.raw({ type: '*/*', limit: '1mb' }));
 
+// ── Log EVERY request ──────────────────────────────────────────────
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url} from ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+  console.log(`[REQUEST] Content-Type: ${req.headers['content-type']}`);
+  console.log(`[REQUEST] Body type: ${typeof req.body}, length: ${req.body ? (Buffer.isBuffer(req.body) ? req.body.length : JSON.stringify(req.body).length) : 0}`);
+  next();
+});
+
 // ── In-memory log of received webhooks ─────────────────────────────
 const webhookLog = [];
 const MAX_LOG = 200;
@@ -174,6 +182,16 @@ app.get('/', (req, res) => {
     </body>
     </html>
   `);
+});
+
+// ── Catch-all: log any unmatched routes ────────────────────────────
+app.all('*', (req, res) => {
+  console.log(`[404] Unmatched: ${req.method} ${req.url}`);
+  console.log(`[404] Headers: ${JSON.stringify(req.headers)}`);
+  res.status(200).send(JSON.stringify({
+    Data: {},
+    Status: { i: true, m: 'OK', s: '200' }
+  }));
 });
 
 app.listen(PORT, () => {
