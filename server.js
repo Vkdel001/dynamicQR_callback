@@ -53,7 +53,10 @@ function aesDecrypt(base64Data) {
 // ═══════════════════════════════════════════════════════════════════
 //  POST /webhook — receives Blink payment callbacks
 // ═══════════════════════════════════════════════════════════════════
-app.post('/webhook', (req, res) => {
+app.post('/webhook', handleWebhook);
+app.post('/', handleWebhook);
+
+function handleWebhook(req, res) {
   const timestamp = new Date().toISOString();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
@@ -138,7 +141,7 @@ app.post('/webhook', (req, res) => {
     Data: {},
     Status: { i: true, m: 'OK', s: '200' }
   }));
-});
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  GET /logs — view received webhooks (browser-friendly)
